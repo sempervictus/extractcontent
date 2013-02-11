@@ -10,25 +10,25 @@
 # Extract Content Module for html
 # ExtractContent : 本文抽出モジュール
 #
-# 与えられた html テキストから本文と思わしきテキストを抽出します。
-# - html をブロックに分離、スコアの低いブロックを除外
-# - 評価の高い連続ブロックをクラスタ化し、クラスタ間でさらに比較を行う
-# - スコアは配置、テキスト長、アフィリエイトリンク、フッタ等に特有のキーワードが含まれているかによって決定
-# - Google AdSense Section Target ブロックには本文が記述されているとし、特に抽出
+# I want to extract text from html body and Omowashiki given text.
+# - Separated into blocks html, exclude the block with a low score
+# - Clustered contiguous blocks acclaimed, make a comparison between cluster further
+# - Determined by whether the score contains a specific keyword placement, text length, affiliate links, footer, etc.
+# - To block Google AdSense Section Target body is being described, in particular extraction
 
 require 'cgi'
 
 module ExtractContent
   # Default option parameters.
   @default = {
-    :threshold => 100,                                                # 本文と見なすスコアの閾値
-    :min_length => 80,                                                # 評価を行うブロック長の最小値
-    :decay_factor => 0.73,                                            # 減衰係数(小さいほど先頭に近いブロックのスコアが高くなる)
-    :continuous_factor => 1.62,                                       # 連続ブロック係数(大きいほどブロックを連続と判定しにくくなる)
-    :punctuation_weight => 10,                                        # 句読点に対するスコア
-    :punctuations => /([、。，．！？]|\.[^A-Za-z0-9]|,[^0-9]|!|\?)/,  # 句読点
-    :waste_expressions => /Copyright|All Rights Reserved/i,           # フッターに含まれる特徴的なキーワードを指定
-    :debug => false,                                                  # true の場合、ブロック情報を標準出力に
+    :threshold => 100,                                                # Thought of as a body score threshold of
+    :min_length => 80,                                                # Minimum value of the evaluation block length
+    :decay_factor => 0.73,                                            # (The higher the score close to the top of the block smaller) attenuation coefficient
+    :continuous_factor => 1.62,                                       # (Judged to be difficult to continuously block the larger coefficient) continuous block
+    :punctuation_weight => 10,                                        # Score for punctuation
+    :punctuations => /([、。，．！？]|\.[^A-Za-z0-9]|,[^0-9]|!|\?)/,     # Punctuation
+    :waste_expressions => /Copyright|All Rights Reserved/i,           # Specify keywords that features contained in the footer
+    :debug => false,                                                  # If true, block information to the standard output
   }
 
   # 実体参照変換
@@ -59,7 +59,7 @@ module ExtractContent
     b = binding   # local_variable_set があれば……
     threshold=min_length=decay_factor=continuous_factor=punctuation_weight=punctuations=waste_expressions=debug=nil
     opt.each do |key, value|
-      eval("#{key.id2name} = opt[:#{key.id2name}]", b) 
+      eval("#{key.id2name} = opt[:#{key.id2name}]", b)
     end
 
     # header & title
@@ -96,11 +96,11 @@ module ExtractContent
       next if has_only_tags(block)
       continuous /= continuous_factor if body.length > 0
 
-      # リンク除外＆リンクリスト判定
+      # Judgment and exclusion list link link
       notlinked = eliminate_link(block)
       next if notlinked.length < min_length
 
-      # スコア算出
+      # Score calculation
       c = (notlinked.length + notlinked.scan(punctuations).length * punctuation_weight) * factor
       factor *= decay_factor
       not_body_rate = block.scan(waste_expressions).length + block.scan(/amazon[a-z0-9\.\/\-\?&]+-22/i).length / 2.0
@@ -108,7 +108,7 @@ module ExtractContent
       c1 = c * continuous
       puts "----- #{c}*#{continuous}=#{c1} #{notlinked.length} \n#{strip_tags(block)[0,100]}\n" if debug
 
-      # ブロック抽出＆スコア加算
+      # Add and score block extraction
       if c1 > threshold
         body += block + "\n"
         score += c1
@@ -156,7 +156,7 @@ module ExtractContent
     st.gsub(/<[^>]*>/im, '').gsub("&nbsp;",'').strip.length == 0
   end
 
-  # リンク除外＆リンクリスト判定
+  # Judgment and exclusion list link link
   def self.eliminate_link(html)
     count = 0
     notlinked = html.gsub(/<a\s[^>]*>.*?<\/a\s*>/im){count+=1;''}.gsub(/<form\s[^>]*>.*?<\/form\s*>/im, '')
@@ -165,8 +165,8 @@ module ExtractContent
     return notlinked
   end
 
-  # リンクリスト判定
-  # リストであれば非本文として除外する
+  # Decision linked list
+  # To be excluded as non-text list if
   def self.islinklist(st)
     if st=~/<(?:ul|dl|ol)(.+?)<\/(?:ul|dl|ol)>/im
       listpart = $1
@@ -178,7 +178,7 @@ module ExtractContent
     end
   end
 
-  # リンクリストらしさを評価
+  # Evaluate the likelihood of a linked list
   def self.evaluate_list(list)
     return 1 if list.length == 0
     hit = 0
